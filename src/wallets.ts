@@ -5,12 +5,13 @@ import {
   type KeyObject,
 } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 import { encodeBase58 } from "./base58.js";
 
-const WALLET_DIRECTORY = join(homedir(), ".faven-seller-simulation");
+const PROJECT_DIRECTORY = join(dirname(fileURLToPath(import.meta.url)), "..");
+const WALLET_DIRECTORY = join(PROJECT_DIRECTORY, ".store");
 const WALLET_FILE = join(WALLET_DIRECTORY, "seller-wallets.json");
 const WALLET_COUNT = 3;
 
