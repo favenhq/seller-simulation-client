@@ -1,0 +1,42 @@
+{
+  "name": "faven-seller-simulation-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone RFQ seller simulator CLI for Solana devnet",
+  "type": "module",
+  "bin": {
+    "faven-seller-simulation": "./bin/run.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "start": "node ./bin/run.js"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "dependencies": {
+    "@oclif/core": "^4.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "oclif": {
+    "bin": "faven-seller-simulation",
+    "dirname": "faven-seller-simulation",
+    "commands": "./dist/commands",
+    "topics": {
+      "setup": {
+        "description": "Create and fund local seller wallets"
+      },
+      "run": {
+        "description": "Run scheduled RFQ seller simulations"
+      }
+    }
+  },
+  "packageManager": "pnpm@10.0.0"
+}
