@@ -1,6 +1,7 @@
 import { Flags, Command } from "@oclif/core";
 
 import {
+  FAVEN_SANDBOX_BASE_URL,
   MARKETS,
   PROTOCOL_STRIKE_SCALE_CONFIRMED,
   marketConfigurationReason,
@@ -25,7 +26,7 @@ export default class Run extends Command {
   public static readonly description = "Run scheduled RFQ seller simulations";
 
   public static readonly flags = {
-    rfqBaseUrl: Flags.string({ required: true, description: "RFQ server base URL" }),
+    rpcUrl: Flags.string({ required: true, description: "Solana devnet RPC URL" }),
     intervalSeconds: Flags.integer({
       default: 300,
       min: 1,
@@ -55,12 +56,12 @@ export default class Run extends Command {
 
     let takerUrl: URL;
     try {
-      takerUrl = takerWebSocketUrl(flags.rfqBaseUrl);
+      takerUrl = takerWebSocketUrl(FAVEN_SANDBOX_BASE_URL);
     } catch (error) {
       log("rpc_error", { reason: safeReason(error) });
       return;
     }
-    const rpc = new SolanaRpc();
+    const rpc = new SolanaRpc(flags.rpcUrl);
     try {
       if (!(await rpc.isDevnet())) {
         log("rpc_error", { reason: "solana_rpc_not_devnet" });

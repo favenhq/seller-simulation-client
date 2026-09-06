@@ -1,4 +1,4 @@
-import { Command } from "@oclif/core";
+import { Command, Flags } from "@oclif/core";
 
 import { MARKETS } from "../config.js";
 import { log, safeReason } from "../log.js";
@@ -11,7 +11,12 @@ const AIRDROP_LAMPORTS = 2_000_000_000n;
 export default class Setup extends Command {
   public static readonly description = "Create local seller wallets and request devnet funding";
 
+  public static readonly flags = {
+    rpcUrl: Flags.string({ required: true, description: "Solana devnet RPC URL" }),
+  };
+
   public async run(): Promise<void> {
+    const { flags } = await this.parse(Setup);
     log("setup_started");
     let walletResult;
     try {
@@ -24,7 +29,7 @@ export default class Setup extends Command {
       log("wallet_created", { seller: publicKey });
     }
 
-    const rpc = new SolanaRpc();
+    const rpc = new SolanaRpc(flags.rpcUrl);
     try {
       if (!(await rpc.isDevnet())) {
         log("rpc_error", { reason: "solana_rpc_not_devnet" });

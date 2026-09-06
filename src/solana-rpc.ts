@@ -1,4 +1,4 @@
-import { DEVNET_GENESIS_HASH, DEVNET_RPC_URL } from "./config.js";
+import { DEVNET_GENESIS_HASH } from "./config.js";
 
 interface RpcSuccess {
   readonly result: unknown;
@@ -15,7 +15,7 @@ type RpcResponse = RpcSuccess | RpcFailure;
 export class SolanaRpc {
   private requestId = 0;
 
-  public constructor(private readonly url = DEVNET_RPC_URL) {}
+  public constructor(private readonly url: string) {}
 
   public async isDevnet(): Promise<boolean> {
     return (await this.call("getGenesisHash", [])) === DEVNET_GENESIS_HASH;
