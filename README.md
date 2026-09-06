@@ -3,9 +3,9 @@
 Standalone Node/Oclif CLI that simulates option sellers against the RFQ server on Solana devnet. It does not import Faven application code.
 
 ```sh
-corepack pnpm build
-corepack pnpm start setup
-corepack pnpm start run --rfqBaseUrl https://your-rfq-server.example
+pnpm build
+pnpm sim:setup
+pnpm sim:run --rfqBaseUrl https://sandbox-api.faven.markets
 ```
 
 `setup` creates and reuses exactly three local wallets, requests devnet SOL, and reports that token funding has not been implemented. Wallet secrets are stored with owner-only file permissions at `.store/seller-wallets.json` in the repository and are never logged.
