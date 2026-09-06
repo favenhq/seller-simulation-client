@@ -113,10 +113,7 @@ async function runCycle(
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "stale_spot");
     return;
   }
-  const expiries = expiryCandidates(
-    new Date(),
-    Math.max(8 * 60 * 60 + 5 * 60, market.constraints.minimumExpiryLeadSeconds)
-  );
+  const expiries = expiryCandidates();
   if (expiries.length === 0) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "no_eligible_expiry");
     return;

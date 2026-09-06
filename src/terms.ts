@@ -1,4 +1,4 @@
-import { STRIKE_SCALE, type MarketConfig } from "./config.js";
+import { PYTH_HERMES_URL, STRIKE_SCALE, type MarketConfig } from "./config.js";
 
 export interface PythSpot {
   readonly price: bigint;
@@ -7,7 +7,7 @@ export interface PythSpot {
 }
 
 export async function fetchSpot(market: MarketConfig): Promise<PythSpot> {
-  const url = new URL("v2/updates/price/latest", withTrailingSlash(market.hermesUrl));
+  const url = new URL("v2/updates/price/latest", withTrailingSlash(PYTH_HERMES_URL));
   url.searchParams.append("ids[]", market.pythFeedId);
   url.searchParams.set("parsed", "true");
   let response: Response;
