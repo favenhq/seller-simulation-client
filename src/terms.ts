@@ -8,6 +8,7 @@ import {
 const RISK_FREE_RATE = 0.045;
 const SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60;
 const TARGET_DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6] as const;
+const SPOT_CACHE_TTL_MILLISECONDS = 60_000;
 const strikeGranularities = [
   { minimumSpotDollars: 20_000, granularityDollars: 1_000 },
   { minimumSpotDollars: 100, granularityDollars: 5 },
@@ -24,7 +25,15 @@ export interface PythSpot {
   readonly publishTime: number;
 }
 
+const spotCache = new Map<
+  string,
+  { readonly spot: PythSpot; readonly expiresAt: number }
+>();
+
 export async function fetchSpot(market: MarketConfig): Promise<PythSpot> {
+  const cached = spotCache.get(market.pythFeedId);
+  if (cached && cached.expiresAt > Date.now()) return cached.spot;
+
   const url = new URL(
     "v2/updates/price/latest",
     withTrailingSlash(PYTH_HERMES_URL),
@@ -63,7 +72,12 @@ export async function fetchSpot(market: MarketConfig): Promise<PythSpot> {
   ) {
     throw new Error("pyth_invalid_price");
   }
-  return { price: value, exponent, publishTime };
+  const spot = { price: value, exponent, publishTime };
+  spotCache.set(market.pythFeedId, {
+    spot,
+    expiresAt: Date.now() + SPOT_CACHE_TTL_MILLISECONDS,
+  });
+  return spot;
 }
 
 export function isFreshSpot(spot: PythSpot, nowSeconds: number): boolean {
