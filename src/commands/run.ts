@@ -77,8 +77,9 @@ export default class Run extends Command {
 
     const intervalMilliseconds = flags.intervalSeconds * 1_000;
     let nextCycleAt = Date.now();
+    let socket: JsonRpcWebSocket | undefined;
     while (true) {
-      await runCycle(rpc, takerUrl, wallets);
+      socket = await runCycle(rpc, takerUrl, wallets, socket);
       nextCycleAt += intervalMilliseconds;
       if (nextCycleAt <= Date.now()) nextCycleAt = Date.now() + intervalMilliseconds;
       await wait(nextCycleAt - Date.now());
@@ -89,8 +90,9 @@ export default class Run extends Command {
 async function runCycle(
   rpc: SolanaRpc,
   takerUrl: URL,
-  wallets: readonly SellerWallet[]
-): Promise<void> {
+  wallets: readonly SellerWallet[],
+  socket: JsonRpcWebSocket | undefined
+): Promise<JsonRpcWebSocket | undefined> {
   const rfqId = uuidv7();
   const market = choose(MARKETS);
   const seller = choose(wallets);
@@ -104,16 +106,16 @@ async function runCycle(
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : "";
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "invalid_or_missing_spot:" + errMsg);
-    return;
+    return socket;
   }
   if (!isFreshSpot(spot, Math.floor(Date.now() / 1_000))) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "stale_spot");
-    return;
+    return socket;
   }
   const expiries = expiryCandidates();
   if (expiries.length === 0) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "no_eligible_expiry");
-    return;
+    return socket;
   }
   const expiry = choose(expiries);
 
@@ -122,16 +124,16 @@ async function runCycle(
     strike = chooseStrike(spot, isPut, expiry, market);
   } catch (error) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, safeReason(error));
-    return;
+    return socket;
   }
   const collateral = await collateralSource(rpc, market, seller, isPut, quantity, strike);
   if (collateral.error) {
     logCycle("rpc_error", rfqId, market, seller, isPut, quantity, collateral.error, expiry, strike);
-    return;
+    return socket;
   }
   if (!collateral.source) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "insufficient_collateral", expiry, strike);
-    return;
+    return socket;
   }
 
   const terms: RfqTerms = {
@@ -144,27 +146,31 @@ async function runCycle(
     seller: seller.publicKey,
     sellerCollateralSource: collateral.source,
   };
-  let socket: JsonRpcWebSocket | undefined;
   try {
-    socket = await JsonRpcWebSocket.connect(takerUrl);
+    socket ??= await JsonRpcWebSocket.connect(takerUrl);
     const requestDeadline = await createRfq(socket, terms);
     logCycle("rfq_created", rfqId, market, seller, isPut, quantity, undefined, expiry, strike);
     const quote = await waitForQuote(socket, rfqId, requestDeadline);
     if (!quote.underwriteTx) {
       logCycle("no_quote", rfqId, market, seller, isPut, quantity, quote.noQuoteReason ?? "no_valid_quote", expiry, strike);
-      return;
+      return socket;
     }
     await submitUnderwrite(socket, terms, quote.underwriteTx, seller.privateKey);
     logCycle("underwrite_queued", rfqId, market, seller, isPut, quantity, undefined, expiry, strike);
+    return socket;
   } catch (error) {
-    if (safeReason(error) === "websocket_timeout") {
+    const reason = safeReason(error);
+    if (reason === "websocket_timeout") {
       logCycle("no_quote", rfqId, market, seller, isPut, quantity, "request_deadline_elapsed", expiry, strike);
     } else {
-      logCycle("rpc_error", rfqId, market, seller, isPut, quantity, safeReason(error), expiry, strike);
+      logCycle("rpc_error", rfqId, market, seller, isPut, quantity, reason, expiry, strike);
     }
-  } finally {
-    socket?.close();
+    return shouldReconnectSocket(reason) ? undefined : socket;
   }
+}
+
+function shouldReconnectSocket(reason: string): boolean {
+  return reason !== "websocket_timeout" && reason.startsWith("websocket_");
 }
 
 async function collateralSource(
