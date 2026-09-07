@@ -15,6 +15,8 @@ export interface MarketConfig {
   readonly pythFeedId: string;
   /** Amounts use the protocol's fixed 1e18 BaseCoin scale. */
   readonly allowedQuantities: readonly bigint[];
+  /** Annualized implied volatility, expressed as a decimal (for example, 0.65 is 65%). */
+  readonly impliedVolatility: number;
 }
 
 /**
@@ -40,6 +42,7 @@ export const MARKETS: readonly MarketConfig[] = [
       80n * CONTRACT_QTY_SCALE,
       100n * CONTRACT_QTY_SCALE,
     ],
+    impliedVolatility: 0.65,
   }
 ];
 
@@ -47,6 +50,9 @@ export function marketConfigurationReason(market: MarketConfig): string | undefi
   if (market.allowedQuantities.length === 0) return "market_has_no_allowed_quantities";
   for (const quantity of market.allowedQuantities) {
     if (quantity <= 0n) return "invalid_market_quantity";
+  }
+  if (!Number.isFinite(market.impliedVolatility) || market.impliedVolatility <= 0) {
+    return "invalid_implied_volatility";
   }
   return undefined;
 }

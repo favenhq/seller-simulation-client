@@ -15,7 +15,7 @@ import {
   expiryCandidates,
   fetchSpot,
   isFreshSpot,
-  requiredCollateral,
+  requiredCollateralTokenBaseUnits,
 } from "../terms.js";
 import { uuidv7 } from "../uuidv7.js";
 import { JsonRpcWebSocket } from "../websocket.js";
@@ -119,7 +119,7 @@ async function runCycle(
 
   let strike: bigint;
   try {
-    strike = chooseStrike(spot, isPut);
+    strike = chooseStrike(spot, isPut, expiry, market);
   } catch (error) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, safeReason(error));
     return;
@@ -173,21 +173,21 @@ async function collateralSource(
   seller: SellerWallet,
   isPut: boolean,
   quantity: bigint,
-  strike: bigint
+  strikeE8: bigint
 ): Promise<{ readonly source?: string; readonly error?: string }> {
   try {
     const mint = isPut ? market.quoteCoinMint : market.baseCoinMint;
-    const required = isPut
-      ? requiredCollateral(
-          quantity,
-          strike,
-          true,
-          await rpc.mintDecimals(market.quoteCoinMint),
-          await rpc.mintDecimals(market.baseCoinMint)
-        )
-      : requiredCollateral(quantity, strike, false, 0, 0);
+    const baseCoinDecimals = await rpc.mintDecimals(market.baseCoinMint);
+    const quoteCoinDecimals = isPut ? await rpc.mintDecimals(market.quoteCoinMint) : 0;
+    const requiredCollateralBaseUnits = requiredCollateralTokenBaseUnits(
+      quantity,
+      strikeE8,
+      isPut,
+      baseCoinDecimals,
+      quoteCoinDecimals
+    );
     const account = (await rpc.tokenAccountsByOwner(seller.publicKey, mint)).find(
-      (candidate) => candidate.amount >= required
+      (candidate) => candidate.amount >= requiredCollateralBaseUnits
     );
     return { source: account?.address };
   } catch (error) {
