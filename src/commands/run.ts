@@ -3,7 +3,6 @@ import { Flags, Command } from "@oclif/core";
 import {
   FAVEN_SANDBOX_BASE_URL,
   MARKETS,
-  PROTOCOL_STRIKE_SCALE_CONFIRMED,
   marketConfigurationReason,
   type MarketConfig,
 } from "../config.js";
@@ -47,10 +46,6 @@ export default class Run extends Command {
         reason: marketConfigurationReason(invalidMarket) ?? "invalid_market_configuration",
         outcome: "disabled",
       });
-      return;
-    }
-    if (!PROTOCOL_STRIKE_SCALE_CONFIRMED) {
-      log("cycle_skipped", { reason: "protocol_strike_scale_unreconciled", outcome: "disabled" });
       return;
     }
 
@@ -107,7 +102,8 @@ async function runCycle(
   try {
     spot = await fetchSpot(market);
   } catch (error) {
-    logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "invalid_or_missing_spot");
+    const errMsg = error instanceof Error ? error.message : "";
+    logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "invalid_or_missing_spot:" + errMsg);
     return;
   }
   if (!isFreshSpot(spot, Math.floor(Date.now() / 1_000))) {

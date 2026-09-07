@@ -21,12 +21,6 @@ export class SolanaRpc {
     return (await this.call("getGenesisHash", [])) === DEVNET_GENESIS_HASH;
   }
 
-  public async requestAirdrop(address: string, lamports: bigint): Promise<string> {
-    const result = await this.call("requestAirdrop", [address, Number(lamports)]);
-    if (typeof result !== "string") throw new Error("invalid_airdrop_response");
-    return result;
-  }
-
   public async tokenAccountsByOwner(
     owner: string,
     mint: string

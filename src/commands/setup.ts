@@ -1,15 +1,12 @@
 import { Command, Flags } from "@oclif/core";
 
-import { MARKETS } from "../config.js";
+import { FAVEN_SANDBOX_BASE_URL, MARKETS } from "../config.js";
 import { log, safeReason } from "../log.js";
 import { SolanaRpc } from "../solana-rpc.js";
-import { UnavailableTokenFunder } from "../token-funder.js";
 import { loadOrCreateWallets } from "../wallets.js";
 
-const AIRDROP_LAMPORTS = 2_000_000_000n;
-
 export default class Setup extends Command {
-  public static readonly description = "Create local seller wallets and request devnet funding";
+  public static readonly description = "Create local seller wallets and fund them on devnet";
 
   public static readonly flags = {
     rpcUrl: Flags.string({ required: true, description: "Solana devnet RPC URL" }),
@@ -40,18 +37,80 @@ export default class Setup extends Command {
       return;
     }
 
-    for (const wallet of walletResult.wallets) {
-      try {
-        const signature = await rpc.requestAirdrop(wallet.publicKey, AIRDROP_LAMPORTS);
-        log("sol_airdrop_result", {
-          seller: wallet.publicKey,
-          outcome: "requested",
-          transactionSignature: signature,
-        });
-      } catch (error) {
-        log("rpc_error", { seller: wallet.publicKey, reason: safeReason(error) });
-      }
-    }
-    await new UnavailableTokenFunder().fund(walletResult.wallets, MARKETS);
+    await fund(walletResult.wallets);
   }
+}
+
+async function fund(
+  wallets: Awaited<ReturnType<typeof loadOrCreateWallets>>["wallets"]
+): Promise<void> {
+  for (const wallet of wallets) {
+    try {
+      const funding = await fundWallet(wallet.publicKey);
+      log("sol_wallet_funding_result", {
+        seller: wallet.publicKey,
+        outcome: "confirmed",
+        transactionSignature: funding.signature,
+        fundedAmounts: JSON.stringify(funding.funded),
+      });
+    } catch (error) {
+      log("rpc_error", { seller: wallet.publicKey, reason: safeReason(error) });
+    }
+  }
+}
+
+interface WalletFundingResponse {
+  readonly signature: string;
+  readonly funded: Readonly<Record<string, string>>;
+}
+
+async function fundWallet(walletAddress: string): Promise<WalletFundingResponse> {
+  let response: Response;
+  try {
+    response = await fetch(new URL("/wallet-fundings", FAVEN_SANDBOX_BASE_URL), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ walletAddress }),
+    });
+  } catch (err) {
+    console.error(err);
+    throw new Error("wallet_funding_network_error");
+  }
+  if (response.status !== 201) {
+    const errBody = await response.text();
+    throw new Error(`wallet_funding_http_${response.status}:${errBody}`);
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error("wallet_funding_invalid_json");
+  }
+  const funding = parseFundedResponse(body);
+  if (funding === null) throw new Error("wallet_funding_invalid_response");
+  return funding;
+}
+
+function parseFundedResponse(value: unknown): WalletFundingResponse | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
+    !("signature" in value) ||
+    !("funded" in value) ||
+    typeof value.signature !== "string" ||
+    typeof value.funded !== "object" ||
+    value.funded === null ||
+    Array.isArray(value.funded)
+  ) {
+    return null;
+  }
+
+  const funded: Record<string, string> = {};
+  for (const [asset, amount] of Object.entries(value.funded)) {
+    if (typeof amount !== "string") return null;
+    funded[asset] = amount;
+  }
+  return { signature: value.signature, funded };
 }
