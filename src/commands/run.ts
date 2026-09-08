@@ -148,9 +148,9 @@ async function runCycle(
   };
   try {
     socket ??= await JsonRpcWebSocket.connect(takerUrl);
-    const requestDeadline = await createRfq(socket, terms);
+    await createRfq(socket, terms);
     logCycle("rfq_created", rfqId, market, seller, isPut, quantity, undefined, expiry, strike);
-    const quote = await waitForQuote(socket, rfqId, requestDeadline);
+    const quote = await waitForQuote(socket, rfqId);
     if (!quote.underwriteTx) {
       logCycle("no_quote", rfqId, market, seller, isPut, quantity, quote.noQuoteReason ?? "no_valid_quote", expiry, strike);
       return socket;

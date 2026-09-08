@@ -21,6 +21,8 @@ export interface QuoteResult {
   readonly noQuoteReason?: string;
 }
 
+const QUOTE_RESULT_TIMEOUT_MS = 10_000;
+
 export async function createRfq(
   socket: JsonRpcWebSocket,
   terms: RfqTerms
@@ -53,13 +55,11 @@ export async function createRfq(
 
 export async function waitForQuote(
   socket: JsonRpcWebSocket,
-  rfqId: string,
-  requestDeadline: number
+  rfqId: string
 ): Promise<QuoteResult> {
-  const timeout = Math.max(1, requestDeadline - Date.now());
   const notification = await socket.next(
     (message) => message.method === "quote.best" && notificationRfqId(message) === rfqId,
-    timeout
+    QUOTE_RESULT_TIMEOUT_MS
   );
   const params = recordField(notification.params, "invalid_quote_notification");
   if (typeof params.noQuoteReason === "string") return { noQuoteReason: params.noQuoteReason };
