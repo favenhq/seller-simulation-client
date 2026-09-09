@@ -14,6 +14,8 @@ export interface RfqTerms {
   readonly strike: bigint;
   readonly seller: string;
   readonly sellerCollateralSource: string;
+  /** QuoteCoin premium destination for calls. Puts reuse sellerCollateralSource. */
+  readonly sellerQuoteDestination?: string;
 }
 
 export interface QuoteResult {
@@ -41,6 +43,9 @@ export async function createRfq(
       strike: terms.strike.toString(),
       seller: terms.seller,
       sellerCollateralSource: terms.sellerCollateralSource,
+      ...(terms.sellerQuoteDestination === undefined
+        ? {}
+        : { sellerQuoteDestination: terms.sellerQuoteDestination }),
     },
   });
   const response = await socket.next(matchesId(requestId), 15_000);

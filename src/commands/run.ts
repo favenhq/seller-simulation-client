@@ -6,6 +6,7 @@ import {
   marketConfigurationReason,
   type MarketConfig,
 } from "../config.js";
+import { deriveAssociatedTokenAddress } from "../associated-token-address.js";
 import { log, safeReason } from "../log.js";
 import { createRfq, submitUnderwrite, takerWebSocketUrl, waitForQuote, type RfqTerms } from "../rfq.js";
 import { SolanaRpc } from "../solana-rpc.js";
@@ -126,13 +127,17 @@ async function runCycle(
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, safeReason(error));
     return socket;
   }
-  const collateral = await collateralSource(rpc, market, seller, isPut, quantity, strike);
-  if (collateral.error) {
-    logCycle("rpc_error", rfqId, market, seller, isPut, quantity, collateral.error, expiry, strike);
+  const accounts = await sellerSettlementAccounts(rpc, market, seller, isPut, quantity, strike);
+  if (accounts.error) {
+    logCycle("rpc_error", rfqId, market, seller, isPut, quantity, accounts.error, expiry, strike);
     return socket;
   }
-  if (!collateral.source) {
+  if (!accounts.collateralSource) {
     logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "insufficient_collateral", expiry, strike);
+    return socket;
+  }
+  if (!isPut && !accounts.quoteDestination) {
+    logCycle("cycle_skipped", rfqId, market, seller, isPut, quantity, "missing_quote_destination", expiry, strike);
     return socket;
   }
 
@@ -144,7 +149,8 @@ async function runCycle(
     quantity,
     strike,
     seller: seller.publicKey,
-    sellerCollateralSource: collateral.source,
+    sellerCollateralSource: accounts.collateralSource,
+    sellerQuoteDestination: accounts.quoteDestination,
   };
   try {
     socket ??= await JsonRpcWebSocket.connect(takerUrl);
@@ -173,18 +179,29 @@ function shouldReconnectSocket(reason: string): boolean {
   return reason !== "websocket_timeout" && reason.startsWith("websocket_");
 }
 
-async function collateralSource(
+async function sellerSettlementAccounts(
   rpc: SolanaRpc,
   market: MarketConfig,
   seller: SellerWallet,
   isPut: boolean,
   quantity: bigint,
   strikeE8: bigint
-): Promise<{ readonly source?: string; readonly error?: string }> {
+): Promise<{
+  readonly collateralSource?: string;
+  readonly quoteDestination?: string;
+  readonly error?: string;
+}> {
   try {
-    const mint = isPut ? market.quoteCoinMint : market.baseCoinMint;
-    const baseCoinDecimals = await rpc.mintDecimals(market.baseCoinMint);
-    const quoteCoinDecimals = isPut ? await rpc.mintDecimals(market.quoteCoinMint) : 0;
+    const collateralMint = isPut ? market.quoteCoinMint : market.baseCoinMint;
+    const quoteDestination = isPut
+      ? undefined
+      : deriveAssociatedTokenAddress(seller.publicKey, market.quoteCoinMint);
+    const [baseCoinDecimals, quoteCoinDecimals, collateralAccounts, quoteAccounts] = await Promise.all([
+      rpc.mintDecimals(market.baseCoinMint),
+      isPut ? rpc.mintDecimals(market.quoteCoinMint) : Promise.resolve(0),
+      rpc.tokenAccountsByOwner(seller.publicKey, collateralMint),
+      isPut ? Promise.resolve(undefined) : rpc.tokenAccountsByOwner(seller.publicKey, market.quoteCoinMint),
+    ]);
     const requiredCollateralBaseUnits = requiredCollateralTokenBaseUnits(
       quantity,
       strikeE8,
@@ -192,10 +209,15 @@ async function collateralSource(
       baseCoinDecimals,
       quoteCoinDecimals
     );
-    const account = (await rpc.tokenAccountsByOwner(seller.publicKey, mint)).find(
+    const collateralAccount = collateralAccounts.find(
       (candidate) => candidate.amount >= requiredCollateralBaseUnits
     );
-    return { source: account?.address };
+    return {
+      collateralSource: collateralAccount?.address,
+      quoteDestination: quoteAccounts?.some((account) => account.address === quoteDestination)
+        ? quoteDestination
+        : undefined,
+    };
   } catch (error) {
     return { error: safeReason(error) };
   }
