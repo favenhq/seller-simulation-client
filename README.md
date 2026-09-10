@@ -3,9 +3,8 @@
 Standalone Node/Oclif CLI that simulates option sellers against the RFQ server on Solana devnet. It does not import Faven application code.
 
 ```sh
-pnpm build
-pnpm sim:setup --rpcUrl https://api.devnet.solana.com
-PYTH_API_KEY=<api key for spot price> pnpm sim:run --rpcUrl https://api.devnet.solana.com
+pnpm sim:setup --rpcUrl "https://api.devnet.solana.com"
+PYTH_API_KEY="<api key for spot price>" pnpm seller:run --rpcUrl https://api.devnet.solana.com
 ```
 
 `setup` creates and reuses exactly three local wallets, then funds them through the RFQ server wallet-funding API. Wallet secrets are stored with owner-only file permissions at `.store/seller-wallets.json` in the repository and are never logged.
