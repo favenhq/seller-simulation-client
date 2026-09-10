@@ -1,6 +1,5 @@
 export const DEVNET_GENESIS_HASH = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
-// export const FAVEN_SANDBOX_BASE_URL = "https://sandbox-api.faven.markets";
-export const FAVEN_SANDBOX_BASE_URL = "http://localhost:8787";
+export const FAVEN_DEVNET_BASE_URL = "https://devnet-api.faven.markets";
 export const CONTRACT_QTY_SCALE = 1_000_000_000_000_000_000n;
 export const STRIKE_SCALE = 100_000_000n;
 export const PYTH_HERMES_URL = "https://hermes.pyth.network";

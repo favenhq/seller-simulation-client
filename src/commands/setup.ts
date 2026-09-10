@@ -1,6 +1,6 @@
 import { Command, Flags } from "@oclif/core";
 
-import { FAVEN_SANDBOX_BASE_URL, MARKETS } from "../config.js";
+import { FAVEN_DEVNET_BASE_URL } from "../config.js";
 import { log, safeReason } from "../log.js";
 import { SolanaRpc } from "../solana-rpc.js";
 import { loadOrCreateWallets } from "../wallets.js";
@@ -67,7 +67,7 @@ interface WalletFundingResponse {
 async function fundWallet(walletAddress: string): Promise<WalletFundingResponse> {
   let response: Response;
   try {
-    response = await fetch(new URL("/wallet-fundings", FAVEN_SANDBOX_BASE_URL), {
+    response = await fetch(new URL("/wallet-fundings", FAVEN_DEVNET_BASE_URL), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ walletAddress }),

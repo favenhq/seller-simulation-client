@@ -1,7 +1,7 @@
 import { Flags, Command } from "@oclif/core";
 
 import {
-  FAVEN_SANDBOX_BASE_URL,
+  FAVEN_DEVNET_BASE_URL,
   MARKETS,
   marketConfigurationReason,
   type MarketConfig,
@@ -52,7 +52,7 @@ export default class Run extends Command {
 
     let takerUrl: URL;
     try {
-      takerUrl = takerWebSocketUrl(FAVEN_SANDBOX_BASE_URL);
+      takerUrl = takerWebSocketUrl(FAVEN_DEVNET_BASE_URL);
     } catch (error) {
       log("rpc_error", { reason: safeReason(error) });
       return;
