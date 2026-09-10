@@ -13,8 +13,8 @@
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "sim:setup": "node ./bin/run.js setup",
-    "sim:run": "node ./bin/run.js run"
+    "seller:setup": "node ./bin/run.js setup",
+    "seller:run": "node ./bin/run.js run"
   },
   "engines": {
     "node": ">=20.18.0"
