@@ -3,15 +3,18 @@ import { createHash } from "node:crypto";
 import { decodeBase58, encodeBase58 } from "./base58.js";
 
 const ASSOCIATED_TOKEN_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const PDA_MARKER = new TextEncoder().encode("ProgramDerivedAddress");
 const ED25519_FIELD_MODULUS = (1n << 255n) - 19n;
 const ED25519_D = mod(-121665n * modularInverse(121666n));
 const ED25519_SQRT_MINUS_ONE = modularExponentiate(2n, (ED25519_FIELD_MODULUS - 1n) / 4n);
 
-export function deriveAssociatedTokenAddress(owner: string, mint: string): string {
+export function deriveAssociatedTokenAddress(
+  owner: string,
+  mint: string,
+  tokenProgram: string
+): string {
   return findProgramAddress(
-    [decodeAddress(owner), decodeAddress(TOKEN_PROGRAM), decodeAddress(mint)],
+    [decodeAddress(owner), decodeAddress(tokenProgram), decodeAddress(mint)],
     decodeAddress(ASSOCIATED_TOKEN_PROGRAM)
   );
 }

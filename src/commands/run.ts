@@ -195,7 +195,11 @@ async function sellerSettlementAccounts(
     const collateralMint = isPut ? market.quoteCoinMint : market.baseCoinMint;
     const quoteDestination = isPut
       ? undefined
-      : deriveAssociatedTokenAddress(seller.publicKey, market.quoteCoinMint);
+      : deriveAssociatedTokenAddress(
+          seller.publicKey,
+          market.quoteCoinMint,
+          market.quoteTokenProgram
+        );
     const [baseCoinDecimals, quoteCoinDecimals, collateralAccounts, quoteAccounts] = await Promise.all([
       rpc.mintDecimals(market.baseCoinMint),
       isPut ? rpc.mintDecimals(market.quoteCoinMint) : Promise.resolve(0),

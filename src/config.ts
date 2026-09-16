@@ -10,7 +10,9 @@ export interface MarketConfig {
   readonly marketAddress: string;
   readonly optionsProgramId: string;
   readonly baseCoinMint: string;
+  readonly baseTokenProgram: string;
   readonly quoteCoinMint: string;
+  readonly quoteTokenProgram: string;
   readonly pythFeedId: string;
   /** Amounts use the protocol's fixed 1e18 BaseCoin scale. */
   readonly allowedQuantities: readonly bigint[];
@@ -27,7 +29,9 @@ export const MARKETS: readonly MarketConfig[] = [
     marketAddress: "CY7qdovcTnpA6qo3Mp1J9Zws2ZnSnM7uXLyEXWGY3EUo",
     optionsProgramId: OPTIONS_PROGRAM_ID,
     baseCoinMint: "wSoLCzXHe214cjx7CFjP1axzXyqLkEwq5Xf873hy1JP",
+    baseTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     quoteCoinMint: "usdcHvyN6fvECJ1poPYkt1vztze1pQ6psC8i4cji2Ly",
+    quoteTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     pythFeedId: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
     allowedQuantities: [
       1n * CONTRACT_QTY_SCALE,
