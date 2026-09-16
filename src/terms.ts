@@ -1,6 +1,6 @@
 import {
+  BACKPACK_TICKER_URL,
   CONTRACT_QTY_SCALE,
-  PYTH_HERMES_URL,
   STRIKE_SCALE,
   type MarketConfig,
 } from "./config.js";
@@ -16,7 +16,7 @@ const strikeGranularities = [
   { minimumSpotDollars: 0, granularityDollars: 0.5 },
 ] as const;
 
-export interface PythSpot {
+export interface Spot {
   /** price e8 scale */
   readonly price: bigint;
   /** negative number to indicate decimals points, positive for pow */
@@ -27,60 +27,43 @@ export interface PythSpot {
 
 const spotCache = new Map<
   string,
-  { readonly spot: PythSpot; readonly expiresAt: number }
+  { readonly spot: Spot; readonly expiresAt: number }
 >();
 
-export async function fetchSpot(market: MarketConfig): Promise<PythSpot> {
-  const cached = spotCache.get(market.pythFeedId);
+export async function fetchSpot(_market: MarketConfig): Promise<Spot> {
+  const cached = spotCache.get("SOL_USDC");
   if (cached && cached.expiresAt > Date.now()) return cached.spot;
 
-  const url = new URL(
-    "v2/updates/price/latest",
-    withTrailingSlash(PYTH_HERMES_URL),
-  );
-  url.searchParams.append("ids[]", market.pythFeedId);
-  url.searchParams.set("parsed", "true");
+  const url = new URL(BACKPACK_TICKER_URL);
+  url.searchParams.set("symbol", "SOL_USDC");
   let response: Response;
   try {
-    response = await fetch(url, {
-      headers: { Authorization: `Bearer ${process.env.PYTH_API_KEY}` },
-    });
+    response = await fetch(url);
   } catch {
-    throw new Error("pyth_network_error");
+    throw new Error("backpack_network_error");
   }
-  if (!response.ok) throw new Error(`pyth_http_${response.status}`);
+  if (!response.ok) throw new Error(`backpack_http_${response.status}`);
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    throw new Error("pyth_invalid_json");
+    throw new Error("backpack_invalid_json");
   }
-  const record = asRecord(payload, "pyth_invalid_response");
-  if (!Array.isArray(record.parsed) || record.parsed.length === 0) {
-    throw new Error("pyth_missing_price");
-  }
-  const parsed = asRecord(record.parsed[0], "pyth_invalid_price");
-  const price = asRecord(parsed.price, "pyth_invalid_price");
-  const priceValue = decimalString(price.price, "pyth_invalid_price");
-  const exponent = numberValue(price.expo, "pyth_invalid_price");
-  const publishTime = numberValue(price.publish_time, "pyth_invalid_price");
-  const value = BigInt(priceValue);
-  if (
-    value <= 0n ||
-    !Number.isInteger(exponent) ||
-    !Number.isInteger(publishTime)
-  ) {
-    throw new Error("pyth_invalid_price");
-  }
-  const spot = { price: value, exponent, publishTime };
-  spotCache.set(market.pythFeedId, {
+  const record = asRecord(payload, "backpack_invalid_response");
+  const price = parseDecimalPrice(record.lastPrice, "backpack_invalid_price");
+  const spot = {
+    price,
+    exponent: -8,
+    publishTime: Math.floor(Date.now() / 1_000),
+  };
+  spotCache.set("SOL_USDC", {
     spot,
     expiresAt: Date.now() + SPOT_CACHE_TTL_MILLISECONDS,
   });
   return spot;
 }
 
-export function isFreshSpot(spot: PythSpot, nowSeconds: number): boolean {
+export function isFreshSpot(spot: Spot, nowSeconds: number): boolean {
   return spot.publishTime <= nowSeconds && nowSeconds - spot.publishTime <= 60;
 }
 
@@ -102,7 +85,7 @@ export function expiryCandidates(
 }
 
 export function chooseStrike(
-  spot: PythSpot,
+  spot: Spot,
   isPut: boolean,
   expiry: number,
   market: MarketConfig,
@@ -112,7 +95,7 @@ export function chooseStrike(
 }
 
 export function availableStrikes(
-  spot: PythSpot,
+  spot: Spot,
   isPut: boolean,
   expiry: number,
   market: MarketConfig,
@@ -168,7 +151,7 @@ export function choose<T>(values: readonly T[]): T {
   return values[Math.floor(Math.random() * values.length)]!;
 }
 
-function spotDollarsNumber(spot: PythSpot): number {
+function spotDollarsNumber(spot: Spot): number {
   const price = Number(spot.price);
   const dollars = price * 10 ** spot.exponent;
   if (!Number.isFinite(dollars) || dollars <= 0)
@@ -301,23 +284,20 @@ function atEightUtc(date: Date): Date {
   );
 }
 
-function withTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value : `${value}/`;
-}
-
 function asRecord(value: unknown, reason: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new Error(reason);
   return Object.fromEntries(Object.entries(value));
 }
 
-function decimalString(value: unknown, reason: string): string {
-  if (typeof value !== "string" || !/^-?\d+$/.test(value))
+function parseDecimalPrice(value: unknown, reason: string): bigint {
+  if (typeof value !== "string" || !/^\d+(?:\.\d+)?$/.test(value)) {
     throw new Error(reason);
-  return value;
-}
-
-function numberValue(value: unknown, reason: string): number {
-  if (typeof value !== "number") throw new Error(reason);
-  return value;
+  }
+  const [whole, fraction = ""] = value.split(".");
+  if (!whole) throw new Error(reason);
+  const scaledFraction = `${fraction}00000000`.slice(0, 8);
+  const price = BigInt(whole) * STRIKE_SCALE + BigInt(scaledFraction);
+  if (price <= 0n) throw new Error(reason);
+  return price;
 }

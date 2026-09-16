@@ -2,7 +2,7 @@ export const DEVNET_GENESIS_HASH = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG
 export const FAVEN_DEVNET_BASE_URL = "https://devnet-api.faven.markets";
 export const CONTRACT_QTY_SCALE = 1_000_000_000_000_000_000n;
 export const STRIKE_SCALE = 100_000_000n;
-export const PYTH_HERMES_URL = "https://hermes.pyth.network";
+export const BACKPACK_TICKER_URL = "https://api.backpack.exchange/api/v1/ticker";
 
 const OPTIONS_PROGRAM_ID = "FAVENgBXzD9K9qYHKRF5RFRJeT4Qa2EV4EoTycki5gGT";
 
@@ -13,7 +13,6 @@ export interface MarketConfig {
   readonly baseTokenProgram: string;
   readonly quoteCoinMint: string;
   readonly quoteTokenProgram: string;
-  readonly pythFeedId: string;
   /** Amounts use the protocol's fixed 1e18 BaseCoin scale. */
   readonly allowedQuantities: readonly bigint[];
   /** Annualized implied volatility, expressed as a decimal (for example, 0.65 is 65%). */
@@ -32,7 +31,6 @@ export const MARKETS: readonly MarketConfig[] = [
     baseTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     quoteCoinMint: "usdcHvyN6fvECJ1poPYkt1vztze1pQ6psC8i4cji2Ly",
     quoteTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-    pythFeedId: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
     allowedQuantities: [
       1n * CONTRACT_QTY_SCALE,
       5n * CONTRACT_QTY_SCALE,

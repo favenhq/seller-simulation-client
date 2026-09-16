@@ -4,7 +4,7 @@ Standalone Node/Oclif CLI that simulates option sellers against the RFQ server o
 
 ```sh
 pnpm seller:setup --rpcUrl "https://api.devnet.solana.com"
-PYTH_API_KEY="<api key for spot price, required>" pnpm seller:run --rpcUrl "https://api.devnet.solana.com"
+pnpm seller:run --rpcUrl "https://api.devnet.solana.com"
 ```
 
 `setup` creates and reuses exactly three local wallets, then funds them through the RFQ server wallet-funding API. Wallet secrets are stored with owner-only file permissions at `.store/seller-wallets.json` in the repository and are never logged.
