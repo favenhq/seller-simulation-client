@@ -1,9 +1,8 @@
 import { Flags, Command } from "@oclif/core";
 
 import {
-  FAVEN_DEVNET_BASE_URL,
-  MARKETS,
   marketConfigurationReason,
+  networkConfig,
   type MarketConfig,
 } from "../config.js";
 import { deriveAssociatedTokenAddress } from "../associated-token-address.js";
@@ -26,7 +25,8 @@ export default class Run extends Command {
   public static readonly description = "Run scheduled RFQ seller simulations";
 
   public static readonly flags = {
-    rpcUrl: Flags.string({ required: true, description: "Solana devnet RPC URL" }),
+    rpcUrl: Flags.string({ required: true, description: "Solana devnet or localhost RPC URL" }),
+    rfqUrl: Flags.string({ description: "RFQ server URL; defaults for the selected network" }),
     intervalSeconds: Flags.integer({
       default: 300,
       min: 1,
@@ -36,35 +36,33 @@ export default class Run extends Command {
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(Run);
-    if (MARKETS.length === 0) {
+    const rpc = new SolanaRpc(flags.rpcUrl);
+    let markets: readonly MarketConfig[];
+    let takerUrl: URL;
+    try {
+      const network = await rpc.supportedNetwork();
+      if (network === null) {
+        log("rpc_error", { reason: "solana_rpc_unsupported_network" });
+        return;
+      }
+      const config = networkConfig(network);
+      markets = config.markets;
+      takerUrl = takerWebSocketUrl(flags.rfqUrl ?? config.rfqBaseUrl);
+    } catch (error) {
+      log("rpc_error", { reason: safeReason(error) });
+      return;
+    }
+    if (markets.length === 0) {
       log("cycle_skipped", { reason: "no_configured_markets", outcome: "disabled" });
       return;
     }
-    const invalidMarket = MARKETS.find((market) => marketConfigurationReason(market) !== undefined);
+    const invalidMarket = markets.find((market) => marketConfigurationReason(market) !== undefined);
     if (invalidMarket) {
       log("cycle_skipped", {
         market: invalidMarket.marketAddress,
         reason: marketConfigurationReason(invalidMarket) ?? "invalid_market_configuration",
         outcome: "disabled",
       });
-      return;
-    }
-
-    let takerUrl: URL;
-    try {
-      takerUrl = takerWebSocketUrl(FAVEN_DEVNET_BASE_URL);
-    } catch (error) {
-      log("rpc_error", { reason: safeReason(error) });
-      return;
-    }
-    const rpc = new SolanaRpc(flags.rpcUrl);
-    try {
-      if (!(await rpc.isDevnet())) {
-        log("rpc_error", { reason: "solana_rpc_not_devnet" });
-        return;
-      }
-    } catch (error) {
-      log("rpc_error", { reason: safeReason(error) });
       return;
     }
 
@@ -80,7 +78,7 @@ export default class Run extends Command {
     let nextCycleAt = Date.now();
     let socket: JsonRpcWebSocket | undefined;
     while (true) {
-      socket = await runCycle(rpc, takerUrl, wallets, socket);
+      socket = await runCycle(rpc, takerUrl, markets, wallets, socket);
       nextCycleAt += intervalMilliseconds;
       if (nextCycleAt <= Date.now()) nextCycleAt = Date.now() + intervalMilliseconds;
       await wait(nextCycleAt - Date.now());
@@ -91,11 +89,12 @@ export default class Run extends Command {
 async function runCycle(
   rpc: SolanaRpc,
   takerUrl: URL,
+  markets: readonly MarketConfig[],
   wallets: readonly SellerWallet[],
   socket: JsonRpcWebSocket | undefined
 ): Promise<JsonRpcWebSocket | undefined> {
   const rfqId = uuidv7();
-  const market = choose(MARKETS);
+  const market = choose(markets);
   const seller = choose(wallets);
   const isPut = Math.random() < 0.5;
   const quantity = choose(market.allowedQuantities);

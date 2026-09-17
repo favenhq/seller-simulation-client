@@ -1,11 +1,20 @@
 # Faven seller simulator
 
-Standalone Node/Oclif CLI that simulates option sellers against the RFQ server on Solana devnet.
+Standalone Node/Oclif CLI that simulates option sellers against the RFQ server on Solana devnet or localhost.
 
 ```sh
 pnpm seller:setup --rpcUrl "https://api.devnet.solana.com"
 pnpm seller:run --rpcUrl "https://api.devnet.solana.com"
 ```
+
+For local development, run the local Solana validator and RFQ server, then use:
+
+```sh
+pnpm seller:setup --rpcUrl "http://localhost:8899"
+pnpm seller:run --rpcUrl "http://localhost:8899"
+```
+
+The localhost RFQ server defaults to `http://localhost:8787`. Pass `--rfqUrl` when it uses another address.
 
 `setup` creates and reuses exactly three local wallets, then funds them through the RFQ server wallet-funding API. Wallet secrets are stored with owner-only file permissions at `.store/seller-wallets.json` in the repository and are never logged.
 

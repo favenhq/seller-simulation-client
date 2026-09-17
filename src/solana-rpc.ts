@@ -1,4 +1,4 @@
-import { DEVNET_GENESIS_HASH } from "./config.js";
+import { DEVNET_GENESIS_HASH, type SolanaNetwork } from "./config.js";
 
 interface RpcSuccess {
   readonly result: unknown;
@@ -17,8 +17,10 @@ export class SolanaRpc {
 
   public constructor(private readonly url: string) {}
 
-  public async isDevnet(): Promise<boolean> {
-    return (await this.call("getGenesisHash", [])) === DEVNET_GENESIS_HASH;
+  public async supportedNetwork(): Promise<SolanaNetwork | null> {
+    const genesisHash = await this.call("getGenesisHash", []);
+    if (genesisHash === DEVNET_GENESIS_HASH) return "devnet";
+    return isLocalhostUrl(this.url) ? "localhost" : null;
   }
 
   public async tokenAccountsByOwner(
@@ -85,6 +87,21 @@ export class SolanaRpc {
     if (rpc.error) throw new Error(`solana_rpc_${rpc.error.code}`);
     return rpc.result;
   }
+}
+
+function isLocalhostUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return (
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    (url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "[::1]")
+  );
 }
 
 export interface TokenAccount {

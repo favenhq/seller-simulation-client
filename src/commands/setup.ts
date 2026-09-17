@@ -1,15 +1,16 @@
 import { Command, Flags } from "@oclif/core";
 
-import { FAVEN_DEVNET_BASE_URL } from "../config.js";
+import { networkConfig } from "../config.js";
 import { log, safeReason } from "../log.js";
 import { SolanaRpc } from "../solana-rpc.js";
 import { loadOrCreateWallets } from "../wallets.js";
 
 export default class Setup extends Command {
-  public static readonly description = "Create local seller wallets and fund them on devnet";
+  public static readonly description = "Create local seller wallets and fund them";
 
   public static readonly flags = {
-    rpcUrl: Flags.string({ required: true, description: "Solana devnet RPC URL" }),
+    rpcUrl: Flags.string({ required: true, description: "Solana devnet or localhost RPC URL" }),
+    rfqUrl: Flags.string({ description: "RFQ server URL; defaults for the selected network" }),
   };
 
   public async run(): Promise<void> {
@@ -28,25 +29,26 @@ export default class Setup extends Command {
 
     const rpc = new SolanaRpc(flags.rpcUrl);
     try {
-      if (!(await rpc.isDevnet())) {
-        log("rpc_error", { reason: "solana_rpc_not_devnet" });
+      const network = await rpc.supportedNetwork();
+      if (network === null) {
+        log("rpc_error", { reason: "solana_rpc_unsupported_network" });
         return;
       }
+      await fund(walletResult.wallets, flags.rfqUrl ?? networkConfig(network).rfqBaseUrl);
     } catch (error) {
       log("rpc_error", { reason: safeReason(error) });
       return;
     }
-
-    await fund(walletResult.wallets);
   }
 }
 
 async function fund(
-  wallets: Awaited<ReturnType<typeof loadOrCreateWallets>>["wallets"]
+  wallets: Awaited<ReturnType<typeof loadOrCreateWallets>>["wallets"],
+  rfqBaseUrl: string
 ): Promise<void> {
   for (const wallet of wallets) {
     try {
-      const funding = await fundWallet(wallet.publicKey);
+      const funding = await fundWallet(wallet.publicKey, rfqBaseUrl);
       log("sol_wallet_funding_result", {
         seller: wallet.publicKey,
         outcome: "confirmed",
@@ -64,10 +66,13 @@ interface WalletFundingResponse {
   readonly funded: Readonly<Record<string, string>>;
 }
 
-async function fundWallet(walletAddress: string): Promise<WalletFundingResponse> {
+async function fundWallet(
+  walletAddress: string,
+  rfqBaseUrl: string
+): Promise<WalletFundingResponse> {
   let response: Response;
   try {
-    response = await fetch(new URL("/wallet-fundings", FAVEN_DEVNET_BASE_URL), {
+    response = await fetch(new URL("/wallet-fundings", rfqBaseUrl), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ walletAddress }),
