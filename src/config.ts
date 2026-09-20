@@ -23,8 +23,6 @@ export interface MarketConfig {
 export type SolanaNetwork = "devnet" | "localhost";
 
 const allowedQuantities = [
-  1n * CONTRACT_QTY_SCALE,
-  5n * CONTRACT_QTY_SCALE,
   10n * CONTRACT_QTY_SCALE,
   15n * CONTRACT_QTY_SCALE,
   20n * CONTRACT_QTY_SCALE,
@@ -37,11 +35,11 @@ const allowedQuantities = [
 
 const LOCALHOST_MARKETS: readonly MarketConfig[] = [
   {
-    marketAddress: "6TkKyoNqvu9KDTCfpXFwn3o6efeVqgMyAsgtD12XAkd1",
+    marketAddress: "99rh3FNKgvuWigwrsaDLMSD9cX8XWkFAdTdHqLkW3BCC",
     optionsProgramId: OPTIONS_PROGRAM_ID,
-    baseCoinMint: "FkFea8rF5Pg11qctH5ypMNiyvEcz7VYjYE6q7hH5M6tc",
+    baseCoinMint: "So11111111111111111111111111111111111111112",
     baseTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-    quoteCoinMint: "HLgnWGB7RMb5PbR62yvT3gJAZfbg8MxE2wNfPWmJwxtw",
+    quoteCoinMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     quoteTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     allowedQuantities,
     impliedVolatility: 0.65,

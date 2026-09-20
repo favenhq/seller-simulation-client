@@ -62,7 +62,7 @@ async function fund(
 }
 
 interface WalletFundingResponse {
-  readonly signature: string;
+  readonly signature: string | null;
   readonly funded: Readonly<Record<string, string>>;
 }
 
@@ -104,7 +104,7 @@ function parseFundedResponse(value: unknown): WalletFundingResponse | null {
     Array.isArray(value) ||
     !("signature" in value) ||
     !("funded" in value) ||
-    typeof value.signature !== "string" ||
+    (typeof value.signature !== "string" && value.signature !== null) ||
     typeof value.funded !== "object" ||
     value.funded === null ||
     Array.isArray(value.funded)
