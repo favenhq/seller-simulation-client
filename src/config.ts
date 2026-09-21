@@ -43,7 +43,27 @@ const LOCALHOST_MARKETS: readonly MarketConfig[] = [
     quoteTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     allowedQuantities,
     impliedVolatility: 0.65,
-  }
+  },
+  {
+    marketAddress: "GJiEFYsYKdX39hkhSs9WLF8AfGgXRjEtegGj3UrHbpXW",
+    optionsProgramId: OPTIONS_PROGRAM_ID,
+    baseCoinMint: "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+    baseTokenProgram: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    quoteCoinMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    quoteTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    allowedQuantities,
+    impliedVolatility: 1.3,
+  },
+  {
+    marketAddress: "6gL1TzV6e4QSffGJdvM7hCoVfe1nTZiB68QPD9ye6NDW",
+    optionsProgramId: OPTIONS_PROGRAM_ID,
+    baseCoinMint: "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+    baseTokenProgram: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    quoteCoinMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    quoteTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    allowedQuantities,
+    impliedVolatility: 0.48,
+  },
 ];
 
 const DEVNET_MARKETS: readonly MarketConfig[] = [
