@@ -16,14 +16,15 @@ export function sellerSignExactTransaction(
   const messageOffset = signatureStart + signatures.value * 64;
   if (messageOffset >= transaction.length) throw new Error("invalid_underwrite_transaction");
   const accountKeys = signedAccountKeys(transaction, messageOffset);
-  if (signatures.value < accountKeys.length || accountKeys.length === 0) {
+  if (signatures.value !== accountKeys.length || accountKeys.length === 0) {
     throw new Error("invalid_underwrite_transaction_signatures");
   }
-  if (encodeBase58(accountKeys[0]!) !== sellerPublicKey) {
-    throw new Error("seller_is_not_transaction_fee_payer");
+  const signerIndex = accountKeys.findIndex((key) => encodeBase58(key) === sellerPublicKey);
+  if (signerIndex < 0) {
+    throw new Error("seller_is_not_transaction_signer");
   }
   const signature = sign(null, transaction.subarray(messageOffset), sellerPrivateKey);
-  signature.copy(transaction, signatureStart);
+  signature.copy(transaction, signatureStart + signerIndex * 64);
   return transaction.toString("base64");
 }
 

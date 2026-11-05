@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
+    "test": "corepack pnpm run build && node --test test/*.test.js",
     "seller:setup": "node --import ./bin/register-typescript-loader.mjs ./bin/dev.js setup",
     "seller:run": "node --import ./bin/register-typescript-loader.mjs ./bin/dev.js run"
   },
